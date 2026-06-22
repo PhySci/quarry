@@ -1,0 +1,5 @@
+{"text": "Илон Маск основал Tesla в 2003 году", "entities": [{"start": 0, "end": 9, "label": "PER"}, {"start": 18, "end": 23, "label": "ORG"}, {"start": 26, "end": 30, "label": "DATE"}]}
+{"text": "Стив Джобс представил iPhone в Сан-Франциско", "labels": [{"start": 0, "end": 10, "type": "PER"}, {"start": 22, "end": 28, "type": "PRODUCT"}, {"start": 31, "end": 44, "type": "LOC"}]}
+{"text": "Москва — столица России", "entities": [{"start": 0, "end": 6, "label": "LOC"}, {"start": 17, "end": 23, "label": "LOC"}], "source": "wiki"}
+{"text": "Запись без сущностей", "entities": []}
+{"text": "Google и Microsoft конкурируют на рынке облаков", "entities": [{"start": 0, "end": 6, "label": "ORG"}, {"start": 9, "end": 18, "label": "ORG"}]}

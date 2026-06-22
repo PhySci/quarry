@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_session
@@ -14,6 +14,7 @@ from app.schemas.record import (
     RecordUpdate,
     validate_entities_against_text,
 )
+from app.services.record_query import build_records_query
 
 router = APIRouter(prefix="/api/datasets/{dataset_id}/records", tags=["records"])
 
@@ -22,43 +23,6 @@ async def ensure_dataset_exists(session: AsyncSession, dataset_id: UUID) -> None
     exists = await session.scalar(select(Dataset.id).where(Dataset.id == dataset_id))
     if exists is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dataset not found")
-
-
-def build_records_query(
-    dataset_id: UUID,
-    q: str | None,
-    labels: str | None,
-    has_entities: bool | None,
-    sort: RecordSort,
-):
-    query = select(Record).where(Record.dataset_id == dataset_id)
-
-    if q:
-        ts_match = func.to_tsvector("russian", Record.text).op("@@")(func.plainto_tsquery("russian", q))
-        query = query.where(or_(ts_match, Record.text.ilike(f"%{q}%")))
-
-    if labels:
-        label_filters = [
-            Record.entities.contains([{"label": label.strip()}])
-            for label in labels.split(",")
-            if label.strip()
-        ]
-        if label_filters:
-            query = query.where(or_(*label_filters))
-
-    if has_entities is True:
-        query = query.where(func.jsonb_array_length(Record.entities) > 0)
-    elif has_entities is False:
-        query = query.where(func.jsonb_array_length(Record.entities) == 0)
-
-    if sort == "created_at_asc":
-        query = query.order_by(Record.created_at.asc())
-    elif sort == "text_length_desc":
-        query = query.order_by(func.length(Record.text).desc(), Record.created_at.desc())
-    else:
-        query = query.order_by(Record.created_at.desc())
-
-    return query
 
 
 @router.get("", response_model=RecordListResponse)

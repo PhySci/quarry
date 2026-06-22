@@ -5,7 +5,6 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import SessionLocal
 from app.models import ImportJob, Record
 from app.schemas.record import Entity, validate_entities_against_text
 
@@ -61,6 +60,8 @@ async def create_import_job(
 
 
 async def process_jsonl_import(job_id: UUID, dataset_id: UUID, content: bytes) -> None:
+    from app.database import SessionLocal
+
     async with SessionLocal() as session:
         job = await session.get(ImportJob, job_id)
         if job is None:

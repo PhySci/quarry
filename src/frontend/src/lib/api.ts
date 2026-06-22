@@ -46,6 +46,25 @@ export type ImportJob = {
   errors: Array<Record<string, unknown>>;
 };
 
+export type DatasetStats = {
+  dataset_id: string;
+  records_count: number;
+  labels: Record<string, number>;
+};
+
+export type RecordSort = 'created_at_desc' | 'created_at_asc' | 'text_length_desc';
+
+export type ExportFormat = 'jsonl' | 'conll' | 'spacy' | 'csv';
+
+export type RecordFilters = {
+  q?: string;
+  labels?: string;
+  has_entities?: string;
+  sort?: RecordSort;
+  page?: number;
+  page_size?: number;
+};
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers =
     init?.body instanceof FormData
@@ -98,5 +117,16 @@ export const api = {
     });
   },
   getImportJob: (datasetId: string, jobId: string) =>
-    apiFetch<ImportJob>(`/api/datasets/${datasetId}/import/${jobId}`)
+    apiFetch<ImportJob>(`/api/datasets/${datasetId}/import/${jobId}`),
+  updateDataset: (id: string, payload: { name?: string; description?: string }) =>
+    apiFetch<Dataset>(`/api/datasets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }),
+  getStats: (datasetId: string) => apiFetch<DatasetStats>(`/api/datasets/${datasetId}/stats`),
+  exportUrl: (datasetId: string, format: ExportFormat, filters: RecordFilters = {}) => {
+    const params = new URLSearchParams({ format });
+    if (filters.q) params.set('q', filters.q);
+    if (filters.labels) params.set('labels', filters.labels);
+    if (filters.has_entities) params.set('has_entities', filters.has_entities);
+    if (filters.sort) params.set('sort', filters.sort);
+    return `${API_URL}/api/datasets/${datasetId}/export?${params}`;
+  }
 };

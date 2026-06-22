@@ -1,15 +1,32 @@
+import re
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session
+from app.database import SessionLocal, get_session
 from app.models import Dataset, ImportJob
 from app.schemas.import_job import DuplicateMode, ImportJobRead
+from app.schemas.record import RecordSort
+from app.services.exporter import (
+    FORMAT_EXTENSIONS,
+    FORMAT_MEDIA_TYPES,
+    ExportFormat,
+    stream_export,
+)
 from app.services.importer import create_import_job, process_jsonl_import
+from app.services.record_query import build_records_query
 
 router = APIRouter(prefix="/api/datasets/{dataset_id}", tags=["import-export"])
+
+
+def _safe_filename(name: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", name).strip("_")
+    return slug or "dataset"
 
 
 async def ensure_dataset_exists(session: AsyncSession, dataset_id: UUID) -> None:
@@ -48,3 +65,34 @@ async def get_import_job(
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="import job not found")
     return ImportJobRead.model_validate(job)
+
+
+@router.get("/export")
+async def export_records(
+    dataset_id: UUID,
+    export_format: ExportFormat = Query(default="jsonl", alias="format"),
+    q: str | None = None,
+    labels: str | None = None,
+    has_entities: bool | None = None,
+    sort: RecordSort = "created_at_desc",
+    session: AsyncSession = Depends(get_session),
+) -> StreamingResponse:
+    dataset = await session.get(Dataset, dataset_id)
+    if dataset is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="dataset not found")
+
+    query = build_records_query(dataset_id, q, labels, has_entities, sort)
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+    extension = FORMAT_EXTENSIONS[export_format]
+    filename = f"{_safe_filename(dataset.name)}_{timestamp}.{extension}"
+
+    async def body() -> AsyncIterator[str]:
+        async with SessionLocal() as export_session:
+            async for chunk in stream_export(export_session, query, export_format):
+                yield chunk
+
+    return StreamingResponse(
+        body(),
+        media_type=FORMAT_MEDIA_TYPES[export_format],
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
