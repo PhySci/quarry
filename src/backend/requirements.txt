@@ -1,0 +1,5 @@
+asyncpg
+fastapi[standard]
+pydantic-settings
+SQLAlchemy
+uvicorn[standard]
