@@ -1,6 +1,6 @@
-import { PUBLIC_API_URL } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 
-const API_URL = PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = env.PUBLIC_API_URL || 'http://localhost:8000';
 
 export type Entity = {
   start: number;
