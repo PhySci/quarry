@@ -1,5 +1,6 @@
 asyncpg
 fastapi[standard]
+greenlet
 pydantic-settings
 SQLAlchemy
 uvicorn[standard]

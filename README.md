@@ -32,7 +32,7 @@ That's it. Once the stack is healthy:
 | Web UI | http://localhost:3000 |
 | REST API | http://localhost:8000 |
 | API docs (Swagger) | http://localhost:8000/docs |
-| PostgreSQL | localhost:5432 (`ner` / `ner`) |
+| PostgreSQL | localhost:5433 (`ner` / `ner`) |
 
 Create a dataset, drag in a `.jsonl` file, and start exploring. A ready-to-use sample lives at [`src/samples/example.jsonl`](src/samples/example.jsonl).
 
@@ -172,12 +172,36 @@ quarry/
 
 ## Development
 
-Run the backend test suite:
+For day-to-day work you don't need to rebuild Docker images. Run only the database in
+Docker and run the backend and frontend locally with hot reload:
 
 ```bash
-cd src/backend
-python -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/python -m pytest
+make db             # start Postgres in Docker (published on localhost:5433)
+make dev-backend    # uvicorn --reload on http://localhost:8000
+make dev-frontend   # vite dev server on http://localhost:3000
+```
+
+`make dev-backend` and `make dev-frontend` each set up their own dependencies
+(`.venv` / `npm install`) on first run. Run them in separate terminals.
+
+Common Make targets:
+
+| Target | Description |
+|---|---|
+| `make up` | Build and run the full stack in Docker |
+| `make down` | Stop the stack |
+| `make db` | Start only the Postgres container |
+| `make dev-backend` | Run the backend locally with hot reload |
+| `make dev-frontend` | Run the frontend locally with hot reload |
+| `make test` | Run the backend test suite |
+| `make clean` | Stop the stack and drop the database volume |
+
+Run `make help` to see all targets.
+
+### Tests
+
+```bash
+make test
 ```
 
 Tests cover import normalization (alternate field names, meta passthrough, overlap and out-of-range rejection) and all four export formatters — no database required.
